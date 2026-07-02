@@ -1,0 +1,75 @@
+{
+  "name": "@smplcty/release",
+  "version": "0.1.0",
+  "description": "Laptop-driven release tooling: derive the SemVer bump from CHANGELOG.md, cut prereleases correctly, and guard against a stale local branch. Shared across the simplicity/productionnow apps.",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./configs/release-it.base.json": "./configs/release-it.base.json"
+  },
+  "bin": {
+    "smplcty-release": "./dist/cli/release.js",
+    "smplcty-release-preflight": "./dist/cli/preflight.js",
+    "smplcty-changelog-bump": "./dist/cli/changelog-bump.js"
+  },
+  "files": [
+    "dist",
+    "configs",
+    "README.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mabulu-inc/simplicity-release.git"
+  },
+  "homepage": "https://github.com/mabulu-inc/simplicity-release#readme",
+  "bugs": {
+    "url": "https://github.com/mabulu-inc/simplicity-release/issues"
+  },
+  "keywords": [
+    "release-it",
+    "release",
+    "changelog",
+    "keep-a-changelog",
+    "semver",
+    "prerelease"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "clean": "rm -rf dist",
+    "lint": "eslint src tests",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "check": "pnpm lint && pnpm typecheck && pnpm build && pnpm test",
+    "release": "GITHUB_TOKEN=$(gh auth token) release-it"
+  },
+  "peerDependencies": {
+    "@release-it/keep-a-changelog": ">=7",
+    "release-it": ">=19"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@release-it/keep-a-changelog": "^7.1.0",
+    "@types/node": "^25.5.2",
+    "eslint": "^10.2.0",
+    "release-it": "^19.2.4",
+    "typescript": "^6.0.2",
+    "typescript-eslint": "^8.58.1",
+    "vitest": "^4.1.4"
+  }
+}

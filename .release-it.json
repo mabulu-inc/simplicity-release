@@ -1,0 +1,22 @@
+{
+  "git": {
+    "requireCleanWorkingDir": true,
+    "requireUpstream": true,
+    "commitMessage": "release: v${version}",
+    "tagName": "v${version}"
+  },
+  "github": {
+    "release": true
+  },
+  "npm": {
+    "publish": true
+  },
+  "plugins": {
+    "@release-it/keep-a-changelog": {
+      "filename": "CHANGELOG.md",
+      "keepUnreleased": false,
+      "addUnreleased": true,
+      "addVersionUrl": false
+    }
+  }
+}
