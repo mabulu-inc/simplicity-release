@@ -6,6 +6,8 @@ All notable changes to `@smplcty/release` are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-07-02
+
 ### Added
 
 - Initial release. Shared laptop-driven release tooling extracted from the
