@@ -1,6 +1,6 @@
 {
   "name": "@smplcty/release",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Laptop-driven release tooling: derive the SemVer bump from CHANGELOG.md, cut prereleases correctly, and guard against a stale local branch. Shared across the simplicity/productionnow apps.",
   "license": "MIT",
   "type": "module",

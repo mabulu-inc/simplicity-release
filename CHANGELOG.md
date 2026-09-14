@@ -6,6 +6,8 @@ All notable changes to `@smplcty/release` are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-09-14
+
 ### Changed
 
 - A breaking change is now recognised only where it is marked, not wherever the
