@@ -6,6 +6,8 @@ All notable changes to `@smplcty/release` are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-09-14
+
 ### Added
 
 - `changelog.d/`: write one file per change instead of appending to
