@@ -51,7 +51,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "clean": "rm -rf dist",
-    "lint": "eslint src tests",
+    "lint": "oxlint --type-aware src tests",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -63,15 +63,14 @@
     "release-it": ">=19"
   },
   "devDependencies": {
-    "@eslint/js": "^10.0.1",
-    "@release-it/keep-a-changelog": "^7.1.0",
-    "@types/node": "^25.5.2",
+    "@release-it/keep-a-changelog": "^8.0.1",
+    "@types/node": "^26.5.1",
     "@types/semver": "^7.8.0",
-    "eslint": "^10.2.0",
-    "release-it": "^19.2.4",
-    "typescript": "^6.0.2",
-    "typescript-eslint": "^8.58.1",
-    "vitest": "^4.1.4"
+    "oxlint": "^1.83.0",
+    "oxlint-tsgolint": "^7.0.2001",
+    "release-it": "^21.0.3",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.0"
   },
   "dependencies": {
     "semver": "^7.8.5"
