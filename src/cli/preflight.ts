@@ -7,31 +7,14 @@
 //
 //   smplcty-release-preflight [branch]   (branch defaults to main)
 
-import { readFileSync } from 'node:fs';
-import { assertBranchCurrent, isWorkingTreeClean } from '../git.js';
-import { hasUnreleasedEntries } from '../changelog.js';
-
-function fail(message: string): never {
-  process.stderr.write(`${message}\n`);
-  process.exit(1);
-}
+import { preflight } from '../release.js';
 
 function main(): void {
-  const branch = process.argv[2] ?? 'main';
-
-  if (!isWorkingTreeClean()) {
-    fail('release blocked: working tree has uncommitted changes');
-  }
-
   try {
-    assertBranchCurrent(branch);
+    preflight(process.argv[2] ?? 'main');
   } catch (err) {
-    fail(err instanceof Error ? err.message : String(err));
-  }
-
-  const changelog = readFileSync('CHANGELOG.md', 'utf8');
-  if (!hasUnreleasedEntries(changelog)) {
-    fail('release blocked: CHANGELOG.md [Unreleased] has no entries — nothing to release');
+    process.stderr.write(`${err instanceof Error ? err.message : String(err)}\n`);
+    process.exit(1);
   }
 }
 

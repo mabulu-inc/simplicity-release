@@ -43,3 +43,66 @@ export function computeBump(changelog: string): Bump {
   }
   return 'patch';
 }
+
+// Keep a Changelog's sections, in the order a folded [Unreleased] lists them.
+export const SECTIONS = ['Added', 'Changed', 'Deprecated', 'Removed', 'Fixed', 'Security'] as const;
+
+// One pending `changelog.d/` file.
+export interface ChangelogEntry {
+  name: string;
+  content: string;
+}
+
+// Split a markdown body into [section, text] chunks, one per `### <Section>` heading.
+// Anything the fold could not place — prose before the first heading, or a heading
+// that is not a Keep a Changelog section — throws instead of vanishing from the notes.
+function parseSections(body: string, source: string): Array<[string, string]> {
+  const chunks: Array<[string, string[]]> = [];
+  for (const line of body.split('\n')) {
+    const last = chunks.at(-1);
+    if (/^#{1,6}(\s|$)/.test(line)) {
+      const section = /^### (.+?)\s*$/.exec(line)?.[1];
+      if (!section || !(SECTIONS as readonly string[]).includes(section)) {
+        throw new Error(
+          `changelog: ${source}: "${line.trim()}" is not a Keep a Changelog section (### ${SECTIONS.join(', ### ')})`,
+        );
+      }
+      chunks.push([section, []]);
+    } else if (last) {
+      last[1].push(line);
+    } else if (line.trim()) {
+      throw new Error(
+        `changelog: ${source}: content before the first ### section heading would be dropped from the release notes`,
+      );
+    }
+  }
+  return chunks.map(([section, lines]) => [
+    section,
+    lines.join('\n').replace(/^(?:[ \t]*\n)+/, '').trimEnd(),
+  ]);
+}
+
+// Fold pending changelog.d/ entries into [Unreleased], one heading per section: two
+// `### Fixed` files (or a file and an existing `### Fixed`) produce one `### Fixed`.
+// Existing [Unreleased] text comes first, then entries in the order given. With no
+// entries the changelog is returned untouched, so the bump over the collated text is
+// the bump over pending entries and [Unreleased] as one set.
+export function collate(changelog: string, entries: readonly ChangelogEntry[]): string {
+  if (entries.length === 0) return changelog;
+  const lines = changelog.split('\n');
+  const start = lines.findIndex((line) => /^## \[Unreleased\]/.test(line));
+  if (start === -1) {
+    throw new Error('changelog: no ## [Unreleased] heading to fold changelog.d entries into');
+  }
+  const next = lines.findIndex((line, i) => i > start && /^## \[/.test(line));
+  const end = next === -1 ? lines.length : next;
+  const chunks = [
+    ...parseSections(lines.slice(start + 1, end).join('\n'), '[Unreleased]'),
+    ...entries.flatMap((entry) => parseSections(entry.content, `changelog.d/${entry.name}`)),
+  ];
+  const body = SECTIONS.flatMap((section) => {
+    const texts = chunks.filter(([s, text]) => s === section && text).map(([, text]) => text);
+    return texts.length > 0 ? [`### ${section}`, '', ...texts, ''] : [];
+  });
+  return [...lines.slice(0, start + 1), '', ...body, ...lines.slice(end)].join('\n');
+}

@@ -10,8 +10,13 @@ import { execFileSync } from 'node:child_process';
 // repo or network. Returns stdout; throws on a non-zero exit.
 export type GitRunner = (args: string[]) => string;
 
-const defaultRunner: GitRunner = (args) =>
-  execFileSync('git', args, { encoding: 'utf8' });
+// A runner for the repo at `cwd` (defaults to the process's working directory).
+export const gitRunner =
+  (cwd?: string): GitRunner =>
+  (args) =>
+    execFileSync('git', args, { cwd, encoding: 'utf8' });
+
+const defaultRunner = gitRunner();
 
 export function branchBehindCount(branch: string, run: GitRunner = defaultRunner): number {
   try {
