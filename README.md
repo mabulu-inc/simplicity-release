@@ -7,9 +7,9 @@ The version is derived, never picked at a prompt.
 
 What it does:
 
-- **Derives the bump from the changelog.** `### Removed` or `**BREAKING**` → major;
+- **Derives the bump from the changelog.** `### Removed` or a breaking entry → major;
   `### Added` → minor; otherwise patch. `[Unreleased]` and pending `changelog.d/`
-  entries count as one set.
+  entries count as one set. See [How the bump is derived](#how-the-bump-is-derived).
 - **Takes one file per change.** Entries in `changelog.d/` never conflict between
   open branches; the release folds them into `[Unreleased]`.
 - **Cuts prereleases correctly.** `--alpha`/`--beta`/`--rc`/`--preRelease=<id>`
@@ -67,6 +67,43 @@ pnpm local-release --alpha                 # staging prerelease (also --beta / -
 pnpm local-release --release-as=3.0.0      # explicit version (see below)
 pnpm local-release --alpha --release-version   # print the next version and exit
 ```
+
+## How the bump is derived
+
+| The changelog has… | Bump |
+| --- | --- |
+| a `### Removed` section, or a breaking marker | major |
+| an `### Added` section | minor |
+| anything else (`### Changed`, `### Fixed`, `### Deprecated`, `### Security`) | patch |
+
+**A breaking marker** is either:
+
+- a line that, after its indentation and an optional `- ` bullet, **starts with**
+  `**BREAKING` or `BREAKING CHANGE`, or
+- a heading that contains `BREAKING CHANGE`.
+
+All of these count:
+
+```md
+- **BREAKING** The compare endpoints now require both dates.
+- **BREAKING:** Node 18 is no longer supported.
+- **BREAKING (schema): identity columns are now `bigint`.**
+- **The date range is remembered rather than carried in the address bar.**
+  **BREAKING** A saved link containing `?from=` no longer sets the window.
+- BREAKING CHANGE: the `timeout` option is now in seconds.
+### ⚠ BREAKING CHANGES
+```
+
+A mention anywhere else is prose, and does not make a release major:
+
+```md
+- Entries marked **BREAKING** now derive a major.        ← mid-sentence
+- A `**BREAKING**` entry is now read correctly.           ← inline code
+```
+
+If a breaking change should ship as a major, put the marker at the start of a line.
+`smplcty-changelog-bump` prints the bump the tool will use, so check it before you
+release.
 
 ## `changelog.d/` — one file per change
 

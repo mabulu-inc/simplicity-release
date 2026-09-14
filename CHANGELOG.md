@@ -6,6 +6,22 @@ All notable changes to `@smplcty/release` are recorded here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- A breaking change is now recognised only where it is marked, not wherever the
+  word appears. A line starting with `**BREAKING` or `BREAKING CHANGE`, or a
+  heading naming breaking changes, makes the release a major; mentioning the
+  marker mid-sentence or in inline code no longer does. A changelog that only
+  mentioned the marker may now derive a smaller version, so check
+  `smplcty-changelog-bump` before releasing. The README lists exactly which
+  forms count.
+
+### Fixed
+
+- Breaking entries written as a bold phrase, such as `**BREAKING: …**` or
+  `**BREAKING (scope): …**`, now make the release a major. Previously they were
+  missed and the release could ship as a minor or patch.
+
 ## [0.2.0] - 2026-09-14
 
 ### Added

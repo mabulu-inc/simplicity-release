@@ -41,6 +41,42 @@ describe('computeBump — keep-a-changelog section → SemVer', () => {
   });
 });
 
+describe('computeBump — a breaking marker must mark an entry, not be mentioned', () => {
+  // Every form below is copied from a real changelog (salez1-next, simplicity-db,
+  // simplicity-auth). A breaking entry shipping as a minor is the worse failure,
+  // so these come first.
+  it.each([
+    ['marker opens the item', '### Changed\n- **BREAKING** **Compare endpoints now require both dates.**\n'],
+    [
+      'marker opens the line after a bold title',
+      '### Changed\n- **The date range is remembered rather than carried in the address bar.**\n  **BREAKING** A saved link containing `?from=` no longer sets the window.\n',
+    ],
+    ['bold phrase with a colon', '### Changed\n- **BREAKING: `classifyPgError` is now copy-free.** It returns…\n'],
+    ['bold phrase with a scope', '### Changed\n- **BREAKING (schema): identity columns are now `bigint`.** All…\n'],
+    ['bold marker with the colon inside', '### Fixed\n- **BREAKING:** dropped Node 18\n'],
+    ['Conventional Commits style', '### Changed\n- BREAKING CHANGE: the config key was renamed\n'],
+    ['nested list item', '### Changed\n- Auth\n  - **BREAKING** tokens now expire\n'],
+    ['release-please heading', '### Fixed\n- a fix\n\n### ⚠ BREAKING CHANGES\n\n* export connect method\n'],
+  ])('%s → major', (_name, body) => {
+    expect(computeBump(changelog(`\n${body}`))).toBe('major');
+  });
+
+  it.each([
+    [
+      'the v0.2.0 entry that derived 1.0.0 (marker in inline code)',
+      '### Added\n- a feature\n\n### Fixed\n\n- A prerelease line no longer keeps a number too small for its changes: a\n  `### Removed` or `**BREAKING**` entry landing on a `2.6.0-rc.N` line now re-opens it.\n',
+      'minor',
+    ],
+    ['mid-sentence bold mention', '### Changed\n- Entries marked **BREAKING** now derive a major\n', 'patch'],
+    ['mid-sentence BREAKING CHANGE', '### Fixed\n- This is not a BREAKING CHANGE, only a fix\n', 'patch'],
+    ['inline code at the start of a line', '### Fixed\n- Docs:\n  `**BREAKING**` markers are described here\n', 'patch'],
+    ['a longer word that starts with BREAKING', '### Fixed\n- **BREAKINGLY** fast parser\n', 'patch'],
+    ['a heading that says BREAKING without CHANGE', '### Fixed\n- a fix\n\n#### About BREAKING markers\n- see docs\n', 'patch'],
+  ])('%s → not major', (_name, body, bump) => {
+    expect(computeBump(changelog(`\n${body}`))).toBe(bump);
+  });
+});
+
 describe('hasUnreleasedEntries', () => {
   it('true when there is a list entry', () => {
     expect(hasUnreleasedEntries(changelog('\n### Fixed\n- x\n'))).toBe(true);
@@ -83,6 +119,15 @@ describe('collate — changelog.d entries fold into [Unreleased]', () => {
     expect(
       computeBump(collate(text, [entry('a.md', '### Changed\n- **BREAKING** y\n')])),
     ).toBe('major');
+  });
+  it('the marker rule is the same for changelog.d entries as for [Unreleased]', () => {
+    const text = changelog('\n');
+    expect(
+      computeBump(collate(text, [entry('a.md', '### Changed\n- **Title.**\n  **BREAKING** detail\n')])),
+    ).toBe('major');
+    expect(
+      computeBump(collate(text, [entry('a.md', '### Fixed\n- a `**BREAKING**` entry is now read correctly\n')])),
+    ).toBe('patch');
   });
   it('entries alone count when [Unreleased] is empty', () => {
     expect(hasUnreleasedEntries(collate(changelog('\n'), [entry('a.md', '### Fixed\n- x\n')]))).toBe(

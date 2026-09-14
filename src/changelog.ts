@@ -3,11 +3,23 @@
 // tested source of truth shared across the apps.
 //
 // Mapping (keep-a-changelog heading -> SemVer):
-//   major  — a `### Removed` section, or any `**BREAKING**` / `BREAKING CHANGE` entry
+//   major  — a `### Removed` section, or a breaking marker (see BREAKING_MARKER)
 //   minor  — a `### Added` section (and not major)
 //   patch  — anything else (### Changed / Fixed / Security / Deprecated only)
 
 export type Bump = 'major' | 'minor' | 'patch';
+
+// A breaking marker either opens a line — after indentation and an optional `- `
+// bullet — with `**BREAKING` (so `**BREAKING**`, `**BREAKING:**`,
+// `**BREAKING (scope): …**`) or `BREAKING CHANGE`, or is a heading naming breaking
+// changes (release-please's `### ⚠ BREAKING CHANGES`). Opening a line, not just a
+// list item, because entries are written as a bold title with the marker leading
+// the next line; headings count because a heading is structure, never prose. A
+// mention anywhere else — mid-sentence, or in inline code describing the marker —
+// is prose: matching it anywhere turned a patch that *described* breaking entries
+// into a 1.0.0.
+const BREAKING_MARKER =
+  /^(?:[ \t]*(?:-[ \t]+)?(?:\*\*BREAKING(?![A-Za-z])|BREAKING CHANGE)|#{1,6}[ \t].*BREAKING CHANGE)/m;
 
 // The lines between the `## [Unreleased]` heading and the next `## [` version heading.
 export function extractUnreleased(changelog: string): string {
@@ -35,7 +47,7 @@ export function computeBump(changelog: string): Bump {
   if (!/^[ \t]*-[ \t]/m.test(block)) {
     throw new Error('changelog: [Unreleased] has no entries — nothing to release');
   }
-  if (/^### Removed/m.test(block) || /\*\*BREAKING\*\*/.test(block) || /BREAKING CHANGE/.test(block)) {
+  if (/^### Removed/m.test(block) || BREAKING_MARKER.test(block)) {
     return 'major';
   }
   if (/^### Added/m.test(block)) {
