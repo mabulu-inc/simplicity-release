@@ -7,7 +7,7 @@
 //   smplcty-release                         # final release; increment = changelog bump (major|minor|patch)
 //   smplcty-release --alpha                 # staging prerelease (also --beta / --rc, or --preRelease=<id>)
 //   smplcty-release --release-as=3.0.0      # explicit version; refused below the changelog bump
-//   smplcty-release --all-at-once           # the tag's deploy may apply destructive changes too
+//   smplcty-release --allow-destructive     # the tag's deploy may apply destructive changes too
 //   smplcty-release --alpha --release-version   # print the next version and exit (args pass through)
 //
 // Config path defaults to .release-it.local.json; override with SMPLCTY_RELEASE_CONFIG.

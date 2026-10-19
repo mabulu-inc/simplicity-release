@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { computeBump } from '../src/changelog.js';
 import { type GitRunner, gitRunner } from '../src/git.js';
-import { releaseMode } from '../src/mode.js';
+import { allowsDestructive } from '../src/destructive.js';
 import { preflight, readPendingEntries, release } from '../src/release.js';
 
 // These run against a real throwaway git repo: the contracts are about what lands on
@@ -237,13 +237,13 @@ describe('release — a failed release-it run undoes the fold', () => {
   }, 30_000);
 });
 
-describe('release — --all-at-once', () => {
-  it('declares the mode on the release commit the tag names, keeping the config\'s commitArgs', () => {
+describe('release — --allow-destructive', () => {
+  it('declares it on the release commit the tag names, keeping the config\'s commitArgs', () => {
     seed({ entries: { 'a.md': '### Fixed\n- x\n' } });
     const runReleaseIt = realReleaseIt({ git: { commitArgs: ['--signoff'] } });
 
-    expect(release(['--all-at-once', '--alpha'], { cwd: dir, runReleaseIt })).toBe(0);
-    expect(releaseMode('v2.5.1-alpha.0', git)).toBe('all-at-once');
+    expect(release(['--allow-destructive', '--alpha'], { cwd: dir, runReleaseIt })).toBe(0);
+    expect(allowsDestructive('v2.5.1-alpha.0', git)).toBe(true);
     expect(git(['log', '-1', '--format=%(trailers:key=Signed-off-by,valueonly)']).trim()).toBe(
       'test <test@example.com>',
     );
@@ -253,7 +253,7 @@ describe('release — --all-at-once', () => {
     git(['commit', '-q', '-m', 'more']);
     git(['push', '-q']);
     expect(release(['--alpha'], { cwd: dir, runReleaseIt })).toBe(0);
-    expect(releaseMode('v2.5.1-alpha.1', git)).toBe('additive');
+    expect(allowsDestructive('v2.5.1-alpha.1', git)).toBe(false);
   }, 30_000);
 
   it('a config it cannot read is refused before the fold', () => {
@@ -262,7 +262,7 @@ describe('release — --all-at-once', () => {
     git(['add', '-A']);
     git(['commit', '-q', '-m', 'config']);
     const before = snapshot();
-    expect(() => release(['--all-at-once'], { cwd: dir, runReleaseIt: mustNotRun })).toThrow(
+    expect(() => release(['--allow-destructive'], { cwd: dir, runReleaseIt: mustNotRun })).toThrow(
       /needs a JSON release-it config/,
     );
     expect(snapshot()).toEqual(before);

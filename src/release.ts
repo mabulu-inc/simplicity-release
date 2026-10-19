@@ -9,8 +9,8 @@ import { existsSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'no
 import { join, resolve } from 'node:path';
 import semver from 'semver';
 import { type ChangelogEntry, collate, computeBump, hasUnreleasedEntries } from './changelog.js';
+import { allowDestructiveArgs } from './destructive.js';
 import { type GitRunner, assertBranchCurrent, gitRunner, isWorkingTreeClean } from './git.js';
-import { allAtOnceArgs } from './mode.js';
 import { computeReleaseArgs, parseReleaseFlags } from './version.js';
 
 export const ENTRIES_DIR = 'changelog.d';
@@ -65,7 +65,7 @@ export function release(
       releaseAs: flags.releaseAs,
       passthru: flags.passthru,
     }),
-    ...(flags.allAtOnce ? allAtOnceArgs(resolve(cwd, config)) : []),
+    ...(flags.allowDestructive ? allowDestructiveArgs(resolve(cwd, config)) : []),
     '--config',
     config,
   ];
