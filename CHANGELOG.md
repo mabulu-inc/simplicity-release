@@ -6,6 +6,18 @@ All notable changes to `@smplcty/release` are recorded here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- `smplcty-release --allow-destructive` lets a release's deploy apply destructive
+  schema changes in the same release, instead of leaving them for a later
+  contract-phase run. The choice is recorded on the release commit the tag points
+  at, so the tag-push run and any later deploy of that tag see it without a manual
+  override. Releases stay additive unless you pass the option, and it works with
+  `--alpha`, `--beta`, and `--rc`.
+- `smplcty-release-allows-destructive [ref]` exits 0 if a release allows
+  destructive changes and 1 if not, so a release workflow can choose how to
+  migrate without parsing tags. Anything it cannot read counts as not allowed.
+
 ### Fixed
 
 - A release refused by a release-it check, such as a `before:init` hook

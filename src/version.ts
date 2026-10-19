@@ -13,6 +13,7 @@ import type { Bump } from './changelog.js';
 export interface ReleaseFlags {
   preId?: string;
   releaseAs?: string;
+  allowDestructive: boolean;
   passthru: string[];
 }
 
@@ -20,13 +21,14 @@ const PRE_ID_ERROR =
   'release: --preRelease needs an id — use --preRelease=<id>, or --alpha/--beta/--rc';
 const RELEASE_AS_ERROR = 'release: --release-as needs a version — use --release-as=<version>';
 
-// Separate a prerelease request (--alpha/--beta/--rc/--preRelease=<id>) and an explicit
-// --release-as=<version> from any other args, which pass straight through to release-it
+// Separate a prerelease request (--alpha/--beta/--rc/--preRelease=<id>), an explicit
+// --release-as=<version> and --allow-destructive from any other args, which pass straight through to release-it
 // (--dry-run, --release-version, …). A malformed --preRelease or --release-as (bare or
 // empty) throws rather than silently falling through to a derived release.
 export function parseReleaseFlags(argv: readonly string[]): ReleaseFlags {
   let preId: string | undefined;
   let releaseAs: string | undefined;
+  let allowDestructive = false;
   const passthru: string[] = [];
   for (const arg of argv) {
     if (arg === '--alpha') preId = 'alpha';
@@ -41,13 +43,14 @@ export function parseReleaseFlags(argv: readonly string[]): ReleaseFlags {
     else if (arg.startsWith('--release-as=')) {
       releaseAs = arg.slice('--release-as='.length);
       if (!releaseAs) throw new Error(RELEASE_AS_ERROR);
-    } else if (arg === '--') {
+    } else if (arg === '--allow-destructive') allowDestructive = true;
+    else if (arg === '--') {
       // tolerate a stray separator (`pnpm local-release -- --alpha`)
     } else {
       passthru.push(arg);
     }
   }
-  return { preId, releaseAs, passthru };
+  return { preId, releaseAs, allowDestructive, passthru };
 }
 
 export interface ReleaseArgsInput {

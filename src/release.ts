@@ -6,9 +6,10 @@
 // the fold commit is undone.
 
 import { existsSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import semver from 'semver';
 import { type ChangelogEntry, collate, computeBump, hasUnreleasedEntries } from './changelog.js';
+import { allowDestructiveArgs } from './destructive.js';
 import { type GitRunner, assertBranchCurrent, gitRunner, isWorkingTreeClean } from './git.js';
 import { computeReleaseArgs, parseReleaseFlags } from './version.js';
 
@@ -64,6 +65,7 @@ export function release(
       releaseAs: flags.releaseAs,
       passthru: flags.passthru,
     }),
+    ...(flags.allowDestructive ? allowDestructiveArgs(resolve(cwd, config)) : []),
     '--config',
     config,
   ];

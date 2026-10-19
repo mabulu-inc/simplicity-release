@@ -4,7 +4,7 @@ import { parseReleaseFlags, computeReleaseArgs } from '../src/version.js';
 
 describe('parseReleaseFlags', () => {
   it('no flags → no preId, no passthru', () => {
-    expect(parseReleaseFlags([])).toEqual({ preId: undefined, passthru: [] });
+    expect(parseReleaseFlags([])).toEqual({ preId: undefined, allowDestructive: false, passthru: [] });
   });
   it('--alpha / --beta / --rc set the id', () => {
     expect(parseReleaseFlags(['--alpha']).preId).toBe('alpha');
@@ -17,7 +17,15 @@ describe('parseReleaseFlags', () => {
   it('unknown args pass through', () => {
     expect(parseReleaseFlags(['--dry-run', '--release-version'])).toEqual({
       preId: undefined,
+      allowDestructive: false,
       passthru: ['--dry-run', '--release-version'],
+    });
+  });
+  it('--allow-destructive is the cut\'s, not release-it\'s', () => {
+    expect(parseReleaseFlags(['--allow-destructive', '--alpha'])).toEqual({
+      preId: 'alpha',
+      allowDestructive: true,
+      passthru: [],
     });
   });
   it('tolerates a stray -- separator', () => {
@@ -35,6 +43,7 @@ describe('parseReleaseFlags', () => {
   it('--release-as=<version> is taken, not passed through', () => {
     expect(parseReleaseFlags(['--release-as=3.0.0', '--dry-run'])).toEqual({
       releaseAs: '3.0.0',
+      allowDestructive: false,
       passthru: ['--dry-run'],
     });
   });
