@@ -20,6 +20,9 @@ What it does:
   `--preRelease` errors instead of silently shipping a final release.
 - **Allows an explicit version, never a smaller one.** `--release-as=<version>`
   for versions that are a business decision; the changelog bump is still the floor.
+- **Declares an all-at-once release.** `--all-at-once` records on the release
+  commit that this release's deploy may apply destructive schema changes too;
+  `smplcty-release-mode` reads it back in the tag-push workflow.
 - **Guards against a stale branch.** Fails fast (and fails closed) if local is
   behind its remote, before anything is built or tagged.
 
@@ -65,6 +68,7 @@ Then:
 pnpm local-release                         # final release; increment from the changelog
 pnpm local-release --alpha                 # staging prerelease (also --beta / --rc)
 pnpm local-release --release-as=3.0.0      # explicit version (see below)
+pnpm local-release --all-at-once           # deploy applies destructive changes too (see below)
 pnpm local-release --alpha --release-version   # print the next version and exit
 ```
 
@@ -156,6 +160,45 @@ It is refused — before anything in the repo is touched — when the version:
 
 It is not `--version`: release-it reads that as "print release-it's own version".
 
+## `--all-at-once` — destructive changes in the same release
+
+A release is additive by default: the migration tool skips destructive changes, and
+they wait for a later, deliberate contract-phase run. When a release has to do it
+all at once, such as deleting leftover rows and making the column required, say so
+when you cut it:
+
+```sh
+pnpm local-release --all-at-once
+pnpm local-release --all-at-once --alpha     # prereleases too
+```
+
+It is one choice for the whole release, and nothing prompts for it. The cut adds a
+`Release-Mode: all-at-once` trailer to the release commit the tag points at, so the
+commit's author and date record who chose it and when (`git show v3.34.0`).
+
+In the release workflow, ask this package instead of parsing tags:
+
+```sh
+if [ "$(pnpm exec smplcty-release-mode)" = all-at-once ]; then
+  ./scripts/migrate.sh --allow-destructive   # e.g. schema-flow's --allow-destructive
+else
+  ./scripts/migrate.sh
+fi
+```
+
+`smplcty-release-mode [ref]` reads the commit `ref` names (default `HEAD`, which is
+the tag in a tag-push run or a later deploy of that tag) and prints `all-at-once` or
+`additive`. It fails closed: no trailer, any other value, or a ref it cannot read is
+`additive`, and it always exits 0. What counts as destructive is up to your
+migration tool; this only carries the yes or no.
+
+The trailer goes through release-it's `git.commitArgs`. A `commitArgs` given on the
+command line replaces the config's, so the cut passes your local config's
+`git.commitArgs` again ahead of the trailer. Only the local config file is read, not
+presets it extends, and `--all-at-once` is refused if that file is not JSON. If your
+config sets `git.commit: false`, there is no release commit to carry the trailer, and
+the release reads as additive.
+
 ## Finishing a prerelease line
 
 Cutting a prerelease moves `[Unreleased]` under that prerelease's heading, so after
@@ -169,6 +212,7 @@ stay beneath as the per-candidate record.
 | --- | --- |
 | `smplcty-release` | Fold `changelog.d/`, then run release-it with the derived / prerelease / `--release-as` increment and the repo's local config. |
 | `smplcty-release-preflight [branch]` | `before:init` gate: clean tree + branch current + `[Unreleased]` or `changelog.d/` has entries. |
+| `smplcty-release-mode [ref]` | Print `all-at-once` or `additive` for the release commit `ref` names (default `HEAD`). Fails closed to `additive`. |
 | `smplcty-changelog-bump [path]` | Print `major`/`minor`/`patch` for `[Unreleased]` plus the `changelog.d/` beside it (exits non-zero if empty). |
 
 ## Library
@@ -182,6 +226,7 @@ import {
   assertBranchCurrent,
   release,
   preflight,
+  releaseMode,
 } from '@smplcty/release';
 ```
 

@@ -17,7 +17,8 @@
   "bin": {
     "smplcty-release": "./dist/cli/release.js",
     "smplcty-release-preflight": "./dist/cli/preflight.js",
-    "smplcty-changelog-bump": "./dist/cli/changelog-bump.js"
+    "smplcty-changelog-bump": "./dist/cli/changelog-bump.js",
+    "smplcty-release-mode": "./dist/cli/release-mode.js"
   },
   "files": [
     "dist",

@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { computeBump } from '../src/changelog.js';
 import { type GitRunner, gitRunner } from '../src/git.js';
+import { releaseMode } from '../src/mode.js';
 import { preflight, readPendingEntries, release } from '../src/release.js';
 
 // These run against a real throwaway git repo: the contracts are about what lands on
@@ -70,6 +71,29 @@ function run(argv: string[]) {
 const mustNotRun = () => {
   throw new Error('release-it must not run');
 };
+
+// Give the seeded repo a remote and a local config extending the shared preset, then
+// return a runner for the real release-it against it.
+function realReleaseIt(overrides: object): (args: string[]) => number {
+  const remote = join(dir, '.origin.git');
+  git(['init', '-q', '--bare', remote]);
+  git(['remote', 'add', 'origin', remote]);
+  writeFileSync(join(dir, '.git', 'info', 'exclude'), '.origin.git/\n');
+  writeFileSync(
+    join(dir, '.release-it.local.json'),
+    JSON.stringify({
+      extends: resolve('configs/release-it.base.json'),
+      github: { release: false },
+      ...overrides,
+    }),
+  );
+  git(['add', '-A']);
+  git(['commit', '-q', '-m', 'config']);
+  git(['push', '-q', '-u', 'origin', 'main']);
+  const bin = resolve('node_modules/release-it/bin/release-it.js');
+  return (args) =>
+    spawnSync(process.execPath, [bin, ...args, '--ci'], { cwd: dir, stdio: 'ignore' }).status ?? 1;
+}
 
 describe('release — changelog.d fold', () => {
   it('folds entries by section, commits, and removes the files before release-it runs', () => {
@@ -204,37 +228,45 @@ describe('release — a failed release-it run undoes the fold', () => {
 
   it('a refusing before:init hook in real release-it leaves the repo as found', () => {
     seed({ entries: { 'a.md': '### Fixed\n- x\n' } });
-    const remote = join(dir, '.origin.git');
-    git(['init', '-q', '--bare', remote]);
-    git(['remote', 'add', 'origin', remote]);
-    git(['push', '-q', '-u', 'origin', 'main']);
-    writeFileSync(join(dir, '.git', 'info', 'exclude'), '.origin.git/\n');
-    writeFileSync(
-      join(dir, '.release-it.local.json'),
-      JSON.stringify({
-        extends: resolve('configs/release-it.base.json'),
-        hooks: { 'before:init': 'exit 1' },
-        github: { release: false },
-      }),
-    );
-    git(['add', '-A']);
-    git(['commit', '-q', '-m', 'config']);
-    git(['push', '-q']);
+    const runReleaseIt = realReleaseIt({ hooks: { 'before:init': 'exit 1' } });
     const before = snapshot();
 
-    const code = release([], {
-      cwd: dir,
-      runReleaseIt: (args) =>
-        spawnSync(process.execPath, [resolve('node_modules/release-it/bin/release-it.js'), ...args, '--ci'], {
-          cwd: dir,
-          stdio: 'ignore',
-        }).status ?? 1,
-    });
-
-    expect(code).not.toBe(0);
+    expect(release([], { cwd: dir, runReleaseIt })).not.toBe(0);
     expect(snapshot()).toEqual(before);
     expect(git(['tag'])).toBe('');
   }, 30_000);
+});
+
+describe('release — --all-at-once', () => {
+  it('declares the mode on the release commit the tag names, keeping the config\'s commitArgs', () => {
+    seed({ entries: { 'a.md': '### Fixed\n- x\n' } });
+    const runReleaseIt = realReleaseIt({ git: { commitArgs: ['--signoff'] } });
+
+    expect(release(['--all-at-once', '--alpha'], { cwd: dir, runReleaseIt })).toBe(0);
+    expect(releaseMode('v2.5.1-alpha.0', git)).toBe('all-at-once');
+    expect(git(['log', '-1', '--format=%(trailers:key=Signed-off-by,valueonly)']).trim()).toBe(
+      'test <test@example.com>',
+    );
+
+    writeFileSync(join(dir, 'changelog.d', 'b.md'), '### Fixed\n- y\n');
+    git(['add', '-A']);
+    git(['commit', '-q', '-m', 'more']);
+    git(['push', '-q']);
+    expect(release(['--alpha'], { cwd: dir, runReleaseIt })).toBe(0);
+    expect(releaseMode('v2.5.1-alpha.1', git)).toBe('additive');
+  }, 30_000);
+
+  it('a config it cannot read is refused before the fold', () => {
+    seed({ entries: { 'a.md': '### Fixed\n- x\n' } });
+    writeFileSync(join(dir, '.release-it.local.json'), 'not json');
+    git(['add', '-A']);
+    git(['commit', '-q', '-m', 'config']);
+    const before = snapshot();
+    expect(() => release(['--all-at-once'], { cwd: dir, runReleaseIt: mustNotRun })).toThrow(
+      /needs a JSON release-it config/,
+    );
+    expect(snapshot()).toEqual(before);
+  });
 });
 
 describe('release — prerelease line', () => {

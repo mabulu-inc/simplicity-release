@@ -20,6 +20,7 @@ export {
   assertBranchCurrent,
   isWorkingTreeClean,
 } from './git.js';
+export { type ReleaseMode, MODE_TRAILER, releaseMode, allAtOnceArgs } from './mode.js';
 export {
   type RepoOptions,
   type ReleaseOptions,
