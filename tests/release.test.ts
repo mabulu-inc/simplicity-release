@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { computeBump } from '../src/changelog.js';
 import { type GitRunner, gitRunner } from '../src/git.js';
 import { preflight, readPendingEntries, release } from '../src/release.js';
@@ -168,6 +169,72 @@ describe('release — refusals leave the working tree untouched', () => {
       /^release: nothing to release — \[Unreleased\] and changelog\.d\/ have no entries$/,
     );
   });
+});
+
+describe('release — a failed release-it run undoes the fold', () => {
+  it('a non-zero exit before the release commit restores the repo', () => {
+    seed({ entries: { 'a.md': '### Fixed\n- x\n' } });
+    const before = snapshot();
+    expect(release([], { cwd: dir, runReleaseIt: () => 1 })).toBe(1);
+    expect(snapshot()).toEqual(before);
+  });
+
+  it('a throw (say, gh auth token failing) restores the repo and rethrows', () => {
+    seed({ entries: { 'a.md': '### Fixed\n- x\n' } });
+    const before = snapshot();
+    expect(() => release([], { cwd: dir, runReleaseIt: mustNotRun })).toThrow(/must not run/);
+    expect(snapshot()).toEqual(before);
+  });
+
+  it('a failure after the release commit leaves history alone', () => {
+    seed({ entries: { 'a.md': '### Fixed\n- x\n' } });
+    const code = release([], {
+      cwd: dir,
+      runReleaseIt: () => {
+        git(['commit', '-q', '--allow-empty', '-m', 'release: v2.5.1']);
+        return 1;
+      },
+    });
+    expect(code).toBe(1);
+    expect(git(['log', '--format=%s', '-2']).trim().split('\n')).toEqual([
+      'release: v2.5.1',
+      'changelog: fold changelog.d entries into [Unreleased]',
+    ]);
+  });
+
+  it('a refusing before:init hook in real release-it leaves the repo as found', () => {
+    seed({ entries: { 'a.md': '### Fixed\n- x\n' } });
+    const remote = join(dir, '.origin.git');
+    git(['init', '-q', '--bare', remote]);
+    git(['remote', 'add', 'origin', remote]);
+    git(['push', '-q', '-u', 'origin', 'main']);
+    writeFileSync(join(dir, '.git', 'info', 'exclude'), '.origin.git/\n');
+    writeFileSync(
+      join(dir, '.release-it.local.json'),
+      JSON.stringify({
+        extends: resolve('configs/release-it.base.json'),
+        hooks: { 'before:init': 'exit 1' },
+        github: { release: false },
+      }),
+    );
+    git(['add', '-A']);
+    git(['commit', '-q', '-m', 'config']);
+    git(['push', '-q']);
+    const before = snapshot();
+
+    const code = release([], {
+      cwd: dir,
+      runReleaseIt: (args) =>
+        spawnSync(process.execPath, [resolve('node_modules/release-it/bin/release-it.js'), ...args, '--ci'], {
+          cwd: dir,
+          stdio: 'ignore',
+        }).status ?? 1,
+    });
+
+    expect(code).not.toBe(0);
+    expect(snapshot()).toEqual(before);
+    expect(git(['tag'])).toBe('');
+  }, 30_000);
 });
 
 describe('release — prerelease line', () => {
