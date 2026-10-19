@@ -20,7 +20,6 @@ export {
   assertBranchCurrent,
   isWorkingTreeClean,
 } from './git.js';
-export { DESTRUCTIVE_TRAILER, allowsDestructive, allowDestructiveArgs } from './destructive.js';
 export {
   type RepoOptions,
   type ReleaseOptions,

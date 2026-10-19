@@ -6,6 +6,18 @@ All notable changes to `@smplcty/release` are recorded here. The format follows
 
 ## [Unreleased]
 
+### Removed
+
+- **BREAKING** `smplcty-release --allow-destructive`,
+  `smplcty-release-allows-destructive`, and the `allowsDestructive`,
+  `allowDestructiveArgs` and `DESTRUCTIVE_TRAILER` exports are gone. Recording destructive permission
+  on a release meant every later deploy of that tag carried it: deploying an older
+  release again could drop what newer releases added, and limiting it to the
+  newest release broke promoting a release to production while staging was ahead.
+  Destructive schema changes belong to the migration tool, applied after the deploy
+  that stopped using the old shape (DigitalPlantLLC/productionnow#307). release-it
+  now rejects `--allow-destructive` as an unknown option.
+
 ## [0.3.0] - 2026-10-19
 
 ### Added
