@@ -1,7 +1,9 @@
 // The repo-touching half of a release: read CHANGELOG.md, changelog.d/ and
 // package.json, refuse anything the version contract forbids, fold pending entries
-// into [Unreleased], then hand release-it its argv. Every refusal is raised before
-// the first write, so a refused release leaves the repo exactly as it found it.
+// into [Unreleased], then hand release-it its argv. A refused release leaves the repo
+// exactly as it found it: our own refusals are raised before the first write, and when
+// release-it fails without releasing — a before:init gate, a precondition, a rollback —
+// the fold commit is undone.
 
 import { existsSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -66,19 +68,34 @@ export function release(
     config,
   ];
 
-  if (entries.length > 0 && !flags.passthru.some((arg) => READ_ONLY_FLAGS.has(arg))) {
-    // The fold is committed because release-it requires a clean tree; a dirty tree
-    // would be refused by release-it anyway, and staged changes would ride along here.
-    if (!isWorkingTreeClean(git)) {
-      throw new Error('release blocked: working tree has uncommitted changes');
-    }
-    writeFileSync(changelogPath, changelog);
-    for (const entry of entries) rmSync(join(cwd, ENTRIES_DIR, entry.name));
-    git(['add', '-A', '--', 'CHANGELOG.md', ENTRIES_DIR]);
-    git(['commit', '-q', '-m', 'changelog: fold changelog.d entries into [Unreleased]']);
+  if (entries.length === 0 || flags.passthru.some((arg) => READ_ONLY_FLAGS.has(arg))) {
+    return runReleaseIt(args);
   }
 
-  return runReleaseIt(args);
+  // The fold is committed because release-it requires a clean tree; a dirty tree
+  // would be refused by release-it anyway, and staged changes would ride along here.
+  if (!isWorkingTreeClean(git)) {
+    throw new Error('release blocked: working tree has uncommitted changes');
+  }
+  const base = git(['rev-parse', 'HEAD']).trim();
+  writeFileSync(changelogPath, changelog);
+  for (const entry of entries) rmSync(join(cwd, ENTRIES_DIR, entry.name));
+  git(['add', '-A', '--', 'CHANGELOG.md', ENTRIES_DIR]);
+  git(['commit', '-q', '-m', 'changelog: fold changelog.d entries into [Unreleased]']);
+  const fold = git(['rev-parse', 'HEAD']).trim();
+
+  let status = 1;
+  try {
+    status = runReleaseIt(args);
+  } finally {
+    // release-it rolls its own commit back on any failure before the push, so HEAD
+    // still at the fold means nothing was released. Past that point HEAD is the
+    // release commit and the fold is history.
+    if (status !== 0 && git(['rev-parse', 'HEAD']).trim() === fold) {
+      git(['reset', '-q', '--hard', base]);
+    }
+  }
+  return status;
 }
 
 // The `before:init` gate: clean tree, branch current with its remote, something to release.

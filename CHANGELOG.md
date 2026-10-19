@@ -6,6 +6,15 @@ All notable changes to `@smplcty/release` are recorded here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- A release refused by a release-it check, such as a `before:init` hook
+  (`smplcty-release-preflight`, a CI verdict check) or a missing upstream, no
+  longer leaves the `changelog.d/` fold committed on your branch. The fold is
+  undone, so the `changelog.d/` files are back and the branch matches its remote
+  again. Fix the cause and run `smplcty-release` again. A release that fails
+  after release-it has made its release commit is left as it is.
+
 ## [0.2.1] - 2026-09-14
 
 ### Changed
