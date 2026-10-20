@@ -6,6 +6,8 @@ All notable changes to `@smplcty/release` are recorded here. The format follows
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-10-20
+
 ### Removed
 
 - **BREAKING** `smplcty-release --allow-destructive`,
