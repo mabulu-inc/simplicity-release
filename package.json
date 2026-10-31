@@ -64,13 +64,14 @@
   },
   "devDependencies": {
     "@release-it/keep-a-changelog": "^8.0.1",
-    "@types/node": "^26.5.1",
+    "@types/node": "^26.6.6",
     "@types/semver": "^7.8.0",
-    "oxlint": "^1.83.0",
-    "oxlint-tsgolint": "^7.0.2001",
-    "release-it": "^21.0.3",
+    "oxlint": "^1.90.0",
+    "oxlint-tsgolint": "^7.0.2005",
+    "release-it": "^21.1.2",
     "typescript": "^7.0.2",
-    "vitest": "^5.0.0"
+    "vite": "^8.3.5",
+    "vitest": "^5.0.5"
   },
   "dependencies": {
     "semver": "^7.8.5"
